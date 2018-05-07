@@ -1,0 +1,38 @@
+Index: modules/ssl/mod_ssl.c
+===================================================================
+--- modules/ssl/mod_ssl.c	(revision 1828328)
++++ modules/ssl/mod_ssl.c	(working copy)
+@@ -753,6 +753,8 @@
+                               AUTHZ_PROVIDER_VERSION,
+                               &ssl_authz_provider_verify_client,
+                               AP_AUTH_INTERNAL_PER_CONF);
++    ap_register_provider(p, "mod_ssl" , "ssl_variables", "0",
++                         ssl_hook_GetVars());
+ }
+ 
+ module AP_MODULE_DECLARE_DATA ssl_module = {
+Index: modules/ssl/ssl_engine_kernel.c
+===================================================================
+--- modules/ssl/ssl_engine_kernel.c	(revision 1828328)
++++ modules/ssl/ssl_engine_kernel.c	(working copy)
+@@ -2521,3 +2521,8 @@
+ }
+ 
+ #endif /* HAVE_SRP */
++
++const char * const *ssl_hook_GetVars()
++{
++   return ssl_hook_Fixup_vars;
++}
+Index: modules/ssl/ssl_private.h
+===================================================================
+--- modules/ssl/ssl_private.h	(revision 1828328)
++++ modules/ssl/ssl_private.h	(working copy)
+@@ -906,6 +906,7 @@
+ int          ssl_hook_ReadReq(request_rec *);
+ int          ssl_hook_Upgrade(request_rec *);
+ void         ssl_hook_ConfigTest(apr_pool_t *pconf, server_rec *s);
++const char* const      *ssl_hook_GetVars(void);
+ 
+ /** Apache authz provisders */
+ extern const authz_provider ssl_authz_provider_require_ssl;
