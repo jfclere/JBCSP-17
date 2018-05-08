@@ -7,13 +7,17 @@
 #include "http_protocol.h"
 #include "http_request.h"
 
+#include "mod_ssl.h"
+
 static const char *const *ssl_hook_Fixup_vars;
+static APR_OPTIONAL_FN_TYPE(ssl_var_lookup) *test_var_ssl_lookup = NULL;
 
 
 static int test_ssl_init(apr_pool_t *p, apr_pool_t *plog,
 apr_pool_t *ptemp, server_rec *s)
 {
     ssl_hook_Fixup_vars = ap_lookup_provider("mod_ssl" , "ssl_variables", "0");
+    test_var_ssl_lookup = APR_RETRIEVE_OPTIONAL_FN(ssl_var_lookup);
     return OK;
 }
 
@@ -27,8 +31,19 @@ static int test_ssl_trans(request_rec *r)
    }
    while (*var != NULL) {
        /* list and read variable */
-       ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, r->server,
-                    "SSL variable: %s", *var);
+       if (test_var_ssl_lookup) {
+           const char *val = test_var_ssl_lookup(r->pool, r->server,
+                                                 r->connection, r, (char *)*var);
+           if (val && val[0])
+               ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, r->server,
+                            "SSL variable: %s : %s", *var, val);
+           else 
+               ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, r->server,
+                            "SSL variable: %s : (null)", *var);
+       } else {
+           ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, r->server,
+                        "SSL variable: %s", *var);
+       }
        var++;
    }
    return DECLINED;
