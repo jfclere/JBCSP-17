@@ -1,38 +1,65 @@
 Index: modules/ssl/mod_ssl.c
 ===================================================================
---- modules/ssl/mod_ssl.c	(revision 1828328)
+--- modules/ssl/mod_ssl.c	(revision 1848607)
 +++ modules/ssl/mod_ssl.c	(working copy)
-@@ -753,6 +753,8 @@
-                               AUTHZ_PROVIDER_VERSION,
-                               &ssl_authz_provider_verify_client,
-                               AP_AUTH_INTERNAL_PER_CONF);
-+    ap_register_provider(p, "mod_ssl" , "ssl_variables", "0",
-+                         ssl_hook_GetVars());
+@@ -589,6 +589,11 @@
+     return ssl_engine_set(c, NULL, 0, 0);
  }
  
- module AP_MODULE_DECLARE_DATA ssl_module = {
++static const char *const * ssl_hook_GetVars(void)
++{
++    return ssl_hook_GetVars_get();
++}
++
+ int ssl_init_ssl_connection(conn_rec *c, request_rec *r)
+ {
+     SSLSrvConfigRec *sc;
+@@ -766,6 +771,7 @@
+     APR_REGISTER_OPTIONAL_FN(ssl_proxy_enable);
+     APR_REGISTER_OPTIONAL_FN(ssl_engine_disable);
+     APR_REGISTER_OPTIONAL_FN(ssl_engine_set);
++    APR_REGISTER_OPTIONAL_FN(ssl_hook_GetVars);
+ 
+     ap_register_auth_provider(p, AUTHZ_PROVIDER_GROUP, "ssl",
+                               AUTHZ_PROVIDER_VERSION,
+Index: modules/ssl/mod_ssl.h
+===================================================================
+--- modules/ssl/mod_ssl.h	(revision 1848607)
++++ modules/ssl/mod_ssl.h	(working copy)
+@@ -86,6 +86,10 @@
+                         (apr_pool_t *p, conn_rec *c, const char *type,
+                          unsigned char **buf, apr_size_t *size));
+ 
++/** A functions that returns the list of SSL environment variable
++ * provided by mod_ssl */ 
++APR_DECLARE_OPTIONAL_FN(const char * const*, ssl_hook_GetVars, (void));
++
+ /** The ssl_proxy_enable() and ssl_engine_{set,disable}() optional
+  * functions are used by mod_proxy to enable use of SSL for outgoing
+  * connections. */
 Index: modules/ssl/ssl_engine_kernel.c
 ===================================================================
---- modules/ssl/ssl_engine_kernel.c	(revision 1828328)
+--- modules/ssl/ssl_engine_kernel.c	(revision 1848607)
 +++ modules/ssl/ssl_engine_kernel.c	(working copy)
-@@ -2521,3 +2521,8 @@
+@@ -2694,3 +2694,8 @@
  }
  
  #endif /* HAVE_SRP */
 +
-+const char * const *ssl_hook_GetVars()
++const char *const * ssl_hook_GetVars_get(void)
 +{
 +   return ssl_hook_Fixup_vars;
 +}
 Index: modules/ssl/ssl_private.h
 ===================================================================
---- modules/ssl/ssl_private.h	(revision 1828328)
+--- modules/ssl/ssl_private.h	(revision 1848607)
 +++ modules/ssl/ssl_private.h	(working copy)
-@@ -906,6 +906,7 @@
- int          ssl_hook_ReadReq(request_rec *);
- int          ssl_hook_Upgrade(request_rec *);
- void         ssl_hook_ConfigTest(apr_pool_t *pconf, server_rec *s);
-+const char* const      *ssl_hook_GetVars(void);
+@@ -1112,6 +1112,8 @@
+ int ssl_is_challenge(conn_rec *c, const char *servername, 
+                      X509 **pcert, EVP_PKEY **pkey);
  
- /** Apache authz provisders */
- extern const authz_provider ssl_authz_provider_require_ssl;
++const char *const * ssl_hook_GetVars_get(void);
++
+ #endif /* SSL_PRIVATE_H */
+ /** @} */
+ 

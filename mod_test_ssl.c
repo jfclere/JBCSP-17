@@ -9,21 +9,25 @@
 
 #include "mod_ssl.h"
 
-static const char *const *ssl_hook_Fixup_vars;
+static APR_OPTIONAL_FN_TYPE(ssl_hook_GetVars) *test_ssl_hook_GetVars = NULL;
 static APR_OPTIONAL_FN_TYPE(ssl_var_lookup) *test_var_ssl_lookup = NULL;
 
 
 static int test_ssl_init(apr_pool_t *p, apr_pool_t *plog,
 apr_pool_t *ptemp, server_rec *s)
 {
-    ssl_hook_Fixup_vars = ap_lookup_provider("mod_ssl" , "ssl_variables", "0");
+    test_ssl_hook_GetVars = APR_RETRIEVE_OPTIONAL_FN(ssl_hook_GetVars);
     test_var_ssl_lookup = APR_RETRIEVE_OPTIONAL_FN(ssl_var_lookup);
     return OK;
 }
 
 static int test_ssl_trans(request_rec *r)
 {
-   const char *const *var = ssl_hook_Fixup_vars;
+   const char *const *var;
+   if (test_ssl_hook_GetVars == NULL)
+       var = NULL;
+   else
+       var = test_ssl_hook_GetVars();
    if (var == NULL) {
        ap_log_error(APLOG_MARK, APLOG_DEBUG, 0, r->server,
                     "No SSL variables");
